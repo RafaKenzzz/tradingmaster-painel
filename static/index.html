@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TradingMaster</title>
+<meta name="description" content="Painel do Claude Trading Bot: capital, velas, posições, decisões e equipa de agentes. Só paper trading.">
+<link rel="icon" href="/static/mark.svg" type="image/svg+xml">
+<link rel="preload" href="/static/fonts/archivo-var-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/static/app.css?v=9">
+<script>
+  document.documentElement.classList.add("js");
+  var t = null; try { t = localStorage.getItem("tm-tema"); } catch (e) {}
+  var q = new URLSearchParams(location.search).get("tema"); if (q === "light" || q === "dark") t = q;
+  if (t) document.documentElement.dataset.theme = t;
+</script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="mk" viewBox="0 0 40 40">
+    <path class="m-1" d="M7 18h2v5h-2z M4 23h8v11H4z M7 34h2v4h-2z M19 10h2v4h-2z M16 14h8v13h-8z M19 27h2v5h-2z"/>
+    <path class="m-2" d="M31 2h2v3h-2z M28 5h8v14h-8z M31 19h2v5h-2z"/>
+  </symbol>
+</svg>
+
+<header class="hdr" id="hdr">
+  <div class="w hdr__in">
+    <a class="brand" href="#geral" aria-label="TradingMaster, início">
+      <svg class="mark mark-anim" id="brandMark" viewBox="0 0 40 40" aria-hidden="true">
+        <path class="m-1" d="M7 18h2v5h-2z M4 23h8v11H4z M7 34h2v4h-2z M19 10h2v4h-2z M16 14h8v13h-8z M19 27h2v5h-2z"/>
+        <path class="m-2" d="M31 2h2v3h-2z M28 5h8v14h-8z M31 19h2v5h-2z"/>
+      </svg>
+      <span>TradingMaster</span>
+    </a>
+    <nav class="nav" aria-label="Secções">
+      <a href="#geral">Visão geral</a><a href="#velas">Velas</a><a href="#desempenho">Desempenho</a>
+      <a href="#posicoes">Posições</a><a href="#regime">Regime</a><a href="#decisoes">Decisões</a><a href="#equipa">Equipa</a><a href="#historico">Histórico</a>
+    </nav>
+    <div class="hdr__meta">
+      <span class="clock"><b id="clkLis">--:--</b> Lisboa · <b id="clkNy">--:--</b> NY</span>
+      <span class="pill" id="mkt"><i></i><span>Bolsa</span></span>
+      <span class="pill pill--paper" title="Conta simulada: nenhuma ordem usa dinheiro real">Paper</span>
+      <button class="theme-toggle" id="themeBtn" type="button" aria-label="Mudar entre tema claro e escuro">
+        <svg class="i-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>
+        <svg class="i-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- 01 Visao geral -->
+  <section class="hero" id="geral">
+    <div class="w">
+      <div class="alerts" id="alerts"></div>
+      <div class="hero__top rv">
+        <p class="label">01 — Visão geral · conta paper</p>
+        <p class="label" id="nextCycle"></p>
+      </div>
+      <h1 class="hero__title rv" style="--d:.08s">
+        <svg class="mark hero__mark mark-anim" id="heroMark" viewBox="0 0 40 40" aria-hidden="true">
+          <path class="m-1" d="M7 18h2v5h-2z M4 23h8v11H4z M7 34h2v4h-2z M19 10h2v4h-2z M16 14h8v13h-8z M19 27h2v5h-2z"/>
+          <path class="m-2" d="M31 2h2v3h-2z M28 5h8v14h-8z M31 19h2v5h-2z"/>
+        </svg>
+        <span id="heroCap">0</span><span class="hero__cur">US$</span>
+      </h1>
+      <p class="lead rv" style="--d:.16s" id="heroLead">A carregar a conta…</p>
+      <div class="facts rv" style="--d:.24s" id="facts"></div>
+    </div>
+  </section>
+
+  <div class="tape" aria-label="Cotações (atraso de até 20 minutos)"><div class="tape__track" id="tape"></div></div>
+
+  <!-- 02 Velas -->
+  <section class="sec sec--mist" id="velas">
+    <div class="w">
+      <div class="sec-head rv">
+        <div><p class="label">02 — Velas</p><h2>O gráfico de <span class="accent" id="cvTitle">SPY</span></h2></div>
+        <p class="sec-head__aside">Velas diárias com as médias de 20, 50 e 200 dias. Nas posições abertas aparecem a entrada, o stop e o alvo.</p>
+      </div>
+      <div class="cv rv" style="--d:.08s">
+        <div class="card">
+          <div class="cv__bar">
+            <div class="cv__grp" id="grpIdx"><span class="label">Índices</span></div>
+            <div class="cv__grp" id="grpPos"></div>
+            <div class="cv__grp" id="grpWatch"></div>
+            <form class="cv__grp" id="cvForm" autocomplete="off"><label class="label" for="cvSearch">Ticker</label><input class="cv__search" id="cvSearch" maxlength="10" placeholder="AAPL" spellcheck="false"></form>
+          </div>
+          <div class="cv__bar">
+            <div class="cv__grp" id="grpRange" role="group" aria-label="Período"></div>
+            <div class="cv__tools" id="grpTools" role="group" aria-label="Camadas do gráfico"></div>
+          </div>
+          <div class="cv__legend" id="cvLegend"></div>
+          <div class="chart" id="candle"></div>
+        </div>
+        <aside class="card side" id="cvSide"></aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- 03 Desempenho -->
+  <section class="sec" id="desempenho">
+    <div class="w">
+      <div class="sec-head rv">
+        <div><p class="label">03 — Desempenho</p><h2>Capital contra o <span class="accent">S&amp;P 500</span></h2></div>
+        <p class="sec-head__aside" id="perfAside">Retorno acumulado desde o início, ao lado do índice, e a queda desde o valor mais alto.</p>
+      </div>
+      <div class="perf rv" style="--d:.08s">
+        <div class="card">
+          <div class="legend" id="eqLegend"></div>
+          <div class="chart" id="eqChart"></div>
+          <div class="card__t" style="margin-top:22px"><h3>Queda desde o máximo</h3><span class="label" id="ddLbl"></span></div>
+          <div class="chart" id="ddChart"></div>
+          <details class="tbl"><summary>Ver dados em tabela</summary><div class="scroll" id="eqTable"></div></details>
+        </div>
+        <div class="stats" id="stats"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 04 Posicoes -->
+  <section class="sec sec--ink" id="posicoes">
+    <div class="w">
+      <div class="sec-head rv">
+        <div><p class="label">04 — Carteira</p><h2>Posições <span class="accent">abertas</span></h2></div>
+        <p class="sec-head__aside" id="posAside">Cada posição tem stop na corretora desde o primeiro minuto.</p>
+      </div>
+      <div class="rv" style="--d:.08s" id="posGrid"></div>
+      <div class="pend" id="pend"></div>
+    </div>
+  </section>
+
+  <!-- 05 Regime -->
+  <section class="sec sec--accent" id="regime">
+    <div class="w">
+      <div class="reg rv">
+        <div id="regMain"></div>
+        <div id="regMkt"></div>
+      </div>
+      <div class="bars rv" style="--d:.1s" id="regBars"></div>
+    </div>
+  </section>
+
+  <!-- 06 Decisoes -->
+  <section class="sec sec--sand" id="decisoes">
+    <div class="w">
+      <div class="sec-head rv">
+        <div><p class="label">06 — Decisões</p><h2>O que foi decidido, <span class="accent">e porquê</span></h2></div>
+        <p class="sec-head__aside">Cada ciclo fica escrito: a justificação do TradingMaster, os trades propostos e o que a corretora recebeu.</p>
+      </div>
+      <div class="tl rv" style="--d:.08s" id="decs"></div>
+    </div>
+  </section>
+
+  <!-- 07 Equipa -->
+  <section class="sec sec--pattern" id="equipa">
+    <div class="w">
+      <div class="sec-head rv">
+        <div><p class="label">07 — Equipa</p><h2>Seis agentes, <span class="accent">um</span> que decide</h2></div>
+        <p class="sec-head__aside">Cada agente trabalha na sua sessão. Carregue num cartão para ler o último relatório.</p>
+      </div>
+      <div class="team rv" style="--d:.08s" id="team"></div>
+      <div class="docs rv" style="--d:.14s">
+        <div class="card"><div class="card__t"><h3>Relatórios recentes</h3><span class="label" id="repCount"></span></div><div class="list" id="reports"></div></div>
+        <div class="card"><div class="card__t"><h3>Diário de trading</h3><span class="label">Auditor</span></div><div class="list" id="diary"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 08 Historico -->
+  <section class="sec" id="historico">
+    <div class="w">
+      <div class="sec-head rv">
+        <div><p class="label">08 — Histórico</p><h2>Trades, watchlist <span class="accent">e eventos</span></h2></div>
+      </div>
+      <div class="card rv" style="--d:.06s">
+        <div class="card__t"><h3>Trades fechados</h3><span class="label" id="closedCount"></span></div>
+        <div class="scroll" id="closed"></div>
+      </div>
+      <div class="hist rv" style="--d:.12s">
+        <div class="card"><div class="card__t"><h3>Watchlist do Caçador</h3><span class="label">carregue para ver as velas</span></div><div class="scroll" id="watch"></div></div>
+        <div class="card"><div class="card__t"><h3>Registo de eventos</h3><span class="label">ordens · stops · alertas</span></div><div class="log" id="events"></div></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="w">
+    <p class="ft-word" aria-hidden="true"><svg class="mark" viewBox="0 0 40 40"><path class="m-1" d="M7 18h2v5h-2z M4 23h8v11H4z M7 34h2v4h-2z M19 10h2v4h-2z M16 14h8v13h-8z M19 27h2v5h-2z"/><path class="m-2" d="M31 2h2v3h-2z M28 5h8v14h-8z M31 19h2v5h-2z"/></svg>TradingMaster</p>
+    <div class="ft-bottom">
+      <span><b>Claude Trading Bot</b> · só paper trading · os limites de risco estão no código e nenhum agente os ultrapassa</span>
+      <span>Resultados passados não garantem resultados futuros · <span id="ftSync">—</span></span>
+    </div>
+  </div>
+</footer>
+
+<dialog id="dlg" aria-labelledby="dlgTitle">
+  <div class="dlg__hd"><h3 id="dlgTitle"></h3><button class="chip" type="button" id="dlgClose">Fechar</button></div>
+  <div class="dlg__bd md" id="dlgBody"></div>
+</dialog>
+
+<script src="/static/app.js?v=9" defer></script>
+</body>
+</html>
